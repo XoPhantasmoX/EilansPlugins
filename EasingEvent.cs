@@ -1,9 +1,10 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace EilansPlugins
 {
-    public abstract class EventPart
+    // 缓动事件区块基类
+    public abstract class EasingEventPartBase
     {
         public double TimeStart { get; set; }
         public double TimeEnd { get; set; }
@@ -13,8 +14,7 @@ namespace EilansPlugins
         public abstract EasingEventPartBase[] Divide(double time);
     }
 
-    public abstract class EasingEventPartBase : EventPart { }
-
+    // 普通缓动事件区块
     public class EasingEventPart : EasingEventPartBase
     {
         public new double TimeStart { get; set; }
@@ -47,6 +47,7 @@ namespace EilansPlugins
         public EasingEventPart Copy() => new EasingEventPart(TimeStart, TimeEnd, ValueStart, ValueEnd, EaseType);
     }
 
+    // 缓动事件尾区块，只有一个固定的值和起始时间，结束时间无限大
     public class EasingEventPartTail : EasingEventPartBase
     {
         public double Value { get; set; }
@@ -73,9 +74,10 @@ namespace EilansPlugins
             };
         }
 
-        public EasingEventPart Copy() => new EasingEventPart(TimeStart, TimeEnd, ValueStart, ValueEnd, EaseType);
+        public EasingEventPartTail Copy() => new EasingEventPartTail(TimeStart, Value);
     }
 
+    // 缓动事件
     public class EasingEvent : IEnumerable
     {
         public List<EasingEventPartBase> EventParts { get; set; }
@@ -114,6 +116,7 @@ namespace EilansPlugins
 
         public double GetValue(double time) => EventParts[FindIndex(time)].GetValue(time);
 
+        // 切分
         public void Divede(double time)
         {
             int i = FindIndex(time);
@@ -128,7 +131,10 @@ namespace EilansPlugins
             EasingEvent newEasingEvent = new EasingEvent(0, 0);
             foreach (EasingEventPartBase part in EventParts)
             {
-                if (part is EasingEventPart easingEventPart) newEasingEvent.EventParts.Add(easingEventPart.Copy());
+                if (part is EasingEventPart easingEventPart)
+                    newEasingEvent.EventParts.Add(easingEventPart.Copy());
+                if (part is EasingEventPartTail easingEventPartTail)
+                    newEasingEvent.EventParts.Add(easingEventPartTail.Copy());
             }
             return newEasingEvent;
         }
