@@ -52,9 +52,9 @@ namespace EilansPlugins
     {
         public double Value { get; set; }
         public new double TimeStart { get; set; }
-        public new double ValueStart { get => Value; set { } }
         public new double TimeEnd { get => double.PositiveInfinity; set { } }
-        public new double ValueEnd { get => double.PositiveInfinity; set { } }
+        public new double ValueStart { get => Value; set { } }
+        public new double ValueEnd { get => Value; set { } }
 
         public EasingEventPartTail(double timeStart, double value)
         {
