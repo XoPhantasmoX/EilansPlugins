@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace EilansPlugins.Event
+namespace EilansPlugin.Event
 {
     // 缓动事件
     public class EasingEvent : IEnumerable
