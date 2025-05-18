@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EilansPlugin
 {
@@ -101,6 +94,13 @@ namespace EilansPlugin
                 {
                     if (isSorted<=index) Init();
                     return iterators[index].Value;
+                }
+                set 
+                {
+                    if (isSorted <= index) Init();
+                    isSorted = index;
+                    RemoveAt(index);
+                    Add(value);
                 }
             }
             int isSorted = 0;
