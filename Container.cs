@@ -13,15 +13,82 @@ namespace EilansPlugin
     {
         public class PriorityList<T> : ICollection<T>, IEnumerable<T>, IEnumerable, IReadOnlyCollection<T>, ICollection
         {
-            LinkedList<T> list = new LinkedList<T>();
-
-            Comparison<T> comparison;
-            List<LinkedListNode<T>> iterators = new List<LinkedListNode<T>>();
             public PriorityList(Comparison<T> comparison)
             {
                 this.comparison += comparison;
             }
 
+
+            LinkedList<T> list = new LinkedList<T>();
+            List<LinkedListNode<T>> iterators = new List<LinkedListNode<T>>();
+
+            Comparison<T> comparison;
+
+            int isSorted = 0;
+
+
+            void Init()
+            {
+                LinkedListNode<T> node;
+                int index;
+                if (isSorted <= 0)
+                {
+                    node = list.First;
+                    index = 0;
+                }
+                else
+                {
+                    node = iterators[isSorted - 1].Next;
+                    index = isSorted;
+                }
+                while (node != null)
+                {
+                    if (index < iterators.Count) iterators[index] = node;
+                    else iterators.Add(node);
+                    node = node.Next;
+                    index++;
+                }
+                isSorted = Count;
+            }
+            void Init(int target)
+            {
+                LinkedListNode<T> node;
+                int index;
+                if (isSorted <= 0)
+                {
+                    node = list.First;
+                    index = 0;
+                }
+                else
+                {
+                    node = iterators[isSorted - 1].Next;
+                    index = isSorted;
+                }
+                while (node != null && index <= target)
+                {
+                    if (index < iterators.Count) iterators[index] = node;
+                    else iterators.Add(node);
+                    node = node.Next;
+                    index++;
+                }
+                isSorted = target + 1;
+            }
+
+
+            public T this[int index]
+            {
+                get
+                {
+                    if (isSorted <= index) Init();
+                    return iterators[index].Value;
+                }
+                set 
+                {
+                    isSorted = index;
+                    RemoveAt(index);
+                    Add(value);
+                }
+            }
 
             public int Count => ((ICollection<T>)list).Count;
 
@@ -106,68 +173,6 @@ namespace EilansPlugin
                     Console.WriteLine(e.ToString());
                     return false;
                 }
-            }
-            public T this[int index]
-            {
-                get
-                {
-                    if (isSorted <= index) Init();
-                    return iterators[index].Value;
-                }
-                set 
-                {
-                    isSorted = index;
-                    RemoveAt(index);
-                    Add(value);
-                }
-            }
-            int isSorted = 0;
-
-            void Init()
-            {
-                LinkedListNode<T> node;
-                int index;
-                if (isSorted <= 0)
-                {
-                    node = list.First;
-                    index = 0;
-                }
-                else
-                {
-                    node = iterators[isSorted - 1].Next;
-                    index = isSorted;
-                }
-                while (node != null)
-                {
-                    if (index < iterators.Count) iterators[index] = node;
-                    else iterators.Add(node);
-                    node = node.Next;
-                    index++;
-                }
-                isSorted = Count;
-            }
-            void Init(int target)
-            {
-                LinkedListNode<T> node;
-                int index;
-                if (isSorted <= 0)
-                {
-                    node = list.First;
-                    index = 0;
-                }
-                else
-                {
-                    node = iterators[isSorted - 1].Next;
-                    index = isSorted;
-                }
-                while (node != null && index <= target)
-                {
-                    if (index < iterators.Count) iterators[index] = node;
-                    else iterators.Add(node);
-                    node = node.Next;
-                    index++;
-                }
-                isSorted = target + 1;
             }
 
             public void Clear()
