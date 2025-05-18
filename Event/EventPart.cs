@@ -1,6 +1,6 @@
 using EilansPlugin.Math;
 
-namespace EilansPlugins.Event
+namespace EilansPlugin.Event
 {
     // 缓动事件区块基类
     public abstract class EventPartBase<T>
