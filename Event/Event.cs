@@ -1,12 +1,12 @@
 using System.Collections;
-using System.Collections.Generic;
+using EilansPlugin.Container;
 
 namespace EilansPlugin.Event
 {
     // 缓动事件
     public class EasingEvent : IEnumerable
     {
-        public List<EasingEventPartBase> EventParts { get; set; }
+        public PriorityList<EasingEventPartBase> EventParts { get; set; }
 
         public EasingEvent(double timeLength, double initValue) => Init(timeLength, initValue);
 
@@ -16,8 +16,8 @@ namespace EilansPlugin.Event
 
         public void Init(double timeLength, double initValue)
         {
-            if (timeLength == 0) EventParts = new List<EasingEventPartBase> { };
-            else EventParts = new List<EasingEventPartBase> { new EasingEventPartTail(0, initValue) };
+            if (timeLength == 0) EventParts = new PriorityList<EasingEventPartBase>((lhs, rhs) => lhs.TimeEnd.CompareTo(rhs.TimeStart)) { };
+            else EventParts = new PriorityList<EasingEventPartBase>((lhs, rhs) => lhs.TimeEnd.CompareTo(rhs.TimeStart)) { new EasingEventPartTail(0, initValue) };
         }
 
         public int FindIndex(double time)
@@ -48,8 +48,9 @@ namespace EilansPlugin.Event
             int i = FindIndex(time);
 
             EasingEventPartBase[] dividedParts = EventParts[i].Divide(time);
-            EventParts[i] = dividedParts[1];
-            EventParts.Insert(i, dividedParts[0]);
+            EventParts.RemoveAt(i);
+            EventParts.Add(dividedParts[0]);
+            EventParts.Add(dividedParts[1]);
         }
 
         public EasingEvent Copy()
