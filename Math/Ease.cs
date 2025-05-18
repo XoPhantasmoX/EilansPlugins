@@ -1,4 +1,4 @@
-namespace EilansPlugins.Math
+namespace EilansPlugin.Math
 {
     public enum EaseType { None, Linear }
 
