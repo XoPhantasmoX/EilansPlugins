@@ -1,4 +1,4 @@
-using EilansPlugins.Math;
+using EilansPlugin.Math;
 
 namespace EilansPlugins.Event
 {
