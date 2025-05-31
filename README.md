@@ -25,8 +25,8 @@
   // 切换缓动类型
   if (curveEvent[0] is EasingCurveEventPart easingCurveEventPart)
   {
-  easingCurveEventPart.TransformType = TransfromType.Sine;
-  easingCurveEventPart.EaseType = EaseType.In;
+      easingCurveEventPart.TransformType = TransfromType.Sine;
+      easingCurveEventPart.EaseType = EaseType.In;
   }
 
   // 设置第一个事件区块的结束值以及下一个区块的起始值为200
