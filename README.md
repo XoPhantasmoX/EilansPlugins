@@ -2,6 +2,8 @@
 给音游做的数据库
 
 ![.NET Framwork Version](https://shields.io/badge/.NET_Framework-4.8-blue)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ## 容器类
 - ✅ 超NB优先列表
   ```csharp
