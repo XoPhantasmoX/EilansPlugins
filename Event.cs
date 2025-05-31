@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -28,7 +28,6 @@ namespace EilansPlugin
         double Displacement { get; }
         double GetValue(double time);
         double GetDisplacement(double timeStart, double timeEnd);
-        void UpdateDisplacement();
         ISpeedEventPart[] Divide(double time);
     }
 
@@ -92,20 +91,60 @@ namespace EilansPlugin
     // 线性速度事件
     public struct LinearSpeedEventPart : ISpeedEventPart
     {
-        public double TimeStart { get; set; }
-        public double TimeEnd { get; set; }
-        public double ValueStart { get; set; }
-        public double ValueEnd { get; set; }
+        public double TimeStart
+        {
+            get => _timeStart;
+            set
+            {
+                _timeStart = value;
+                UpdateDisplacement();
+            }
+        }
+
+        public double TimeEnd
+        {
+            get => _timeEnd;
+            set
+            {
+                _timeEnd = value;
+                UpdateDisplacement();
+            }
+        }
+
+        public double ValueStart
+        {
+            get => _valueStart;
+            set
+            {
+                _valueStart = value;
+                UpdateDisplacement();
+            }
+        }
+
+        public double ValueEnd
+        {
+            get => _valueEnd;
+            set
+            {
+                _valueEnd = value;
+                UpdateDisplacement();
+            }
+        }
+
         public double Displacement => _displacement;
 
+        private double _timeStart;
+        private double _timeEnd;
+        private double _valueStart;
+        private double _valueEnd;
         private double _displacement;
 
         public LinearSpeedEventPart(double timeStart, double timeEnd, double valueStart, double valueEnd)
         {
-            TimeStart = timeStart;
-            TimeEnd = timeEnd;
-            ValueStart = valueStart;
-            ValueEnd = valueEnd;
+            _timeStart = timeStart;
+            _timeEnd = timeEnd;
+            _valueStart = valueStart;
+            _valueEnd = valueEnd;
             _displacement = 0;
             UpdateDisplacement();
         }
@@ -116,7 +155,7 @@ namespace EilansPlugin
         public double GetDisplacement(double timeStart, double timeEnd) =>
             (GetValue(timeStart) + GetValue(timeEnd)) * (timeEnd - timeStart) / 2;
 
-        public void UpdateDisplacement() => _displacement = GetDisplacement(TimeStart, TimeEnd);
+        private void UpdateDisplacement() => _displacement = GetDisplacement(TimeStart, TimeEnd);
 
         public ISpeedEventPart[] Divide(double time)
         {
@@ -136,23 +175,17 @@ namespace EilansPlugin
         public double TimeEnd { get => double.PositiveInfinity; set { } }
         public double ValueStart { get; set; }
         public double ValueEnd { get => ValueStart; set { } }
-        public double Displacement => _displacement;
-
-        private double _displacement;
+        public double Displacement => double.PositiveInfinity;
 
         public EmptySpeedEventPart(double timeStart, double valueStart)
         {
             TimeStart = timeStart;
             ValueStart = valueStart;
-            _displacement = 0;
-            UpdateDisplacement();
         }
 
         public double GetValue(double time) => ValueStart;
 
         public double GetDisplacement(double timeStart, double timeEnd) => (timeEnd - timeStart) * ValueStart;
-
-        public void UpdateDisplacement() => _displacement = GetDisplacement(TimeStart, TimeEnd);
 
         public ISpeedEventPart[] Divide(double time) => new ISpeedEventPart[]
         {
@@ -280,6 +313,18 @@ namespace EilansPlugin
         // 取值
         public double GetValue(double time) =>
             EventParts[FindIndex(time)].GetValue(time);
+
+        // 获取位移
+        public double GetDisplacement(double time)
+        {
+            int i = FindIndex(time);
+            double displacement = 0;
+
+            for (int j = 0; j < i; j++) displacement += EventParts[j].Displacement;
+            displacement += EventParts[i].GetDisplacement(EventParts[i].TimeStart, time);
+
+            return displacement;
+        }
 
         // 切分
         public void Divede(double time)
