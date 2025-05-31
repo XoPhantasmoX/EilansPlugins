@@ -1,6 +1,7 @@
 # EilansPlugins
 给音游做的数据库
-以下是目标实现
+
+![.NET Framwork Version](https://shields.io/badge/.NET_Framework-4.8-blue)
 ## 容器类
 - ✅ 超NB优先列表
   ```csharp
