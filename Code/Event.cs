@@ -27,8 +27,22 @@ namespace EilansPlugin
         double ValueEnd { get; set; }
         double Displacement { get; }
         double GetValue(double time);
+        double GetDisplacement();
+        double GetDisplacement(double time);
         double GetDisplacement(double timeStart, double timeEnd);
         ISpeedEventPart[] Divide(double time);
+    }
+
+    // 事件接口
+    public interface IEvent : IEnumerable
+    {
+        void SetValueStart(int index, double value);
+        void SetValueEnd(int index, double value);
+        int FindIndex(double time);
+        double GetValue(double time);
+        void Divede(double time);
+        void Clear();
+        IEvent Copy();
     }
 
     // 缓动事件区块
@@ -65,7 +79,7 @@ namespace EilansPlugin
         }
     }
 
-    // 空曲线事件
+    // 空曲线事件区块
     public struct EmptyCurveEventPart : ICurveEventPart
     {
         public double TimeStart { get; set; }
@@ -88,7 +102,7 @@ namespace EilansPlugin
         };
     }
 
-    // 线性速度事件
+    // 线性速度事件区块
     public struct LinearSpeedEventPart : ISpeedEventPart
     {
         public double TimeStart
@@ -150,10 +164,14 @@ namespace EilansPlugin
         }
 
         public double GetValue(double time) =>
-            ValueStart + ((time - TimeStart) / (TimeEnd - TimeStart)) * (ValueEnd - ValueStart);
+            ValueStart + (time - TimeStart) / (TimeEnd - TimeStart) * (ValueEnd - ValueStart);
 
         public double GetDisplacement(double timeStart, double timeEnd) =>
             (GetValue(timeStart) + GetValue(timeEnd)) * (timeEnd - timeStart) / 2;
+
+        public double GetDisplacement(double time) => GetDisplacement(TimeStart, time);
+
+        public double GetDisplacement() => GetDisplacement(TimeStart, TimeEnd);
 
         private void UpdateDisplacement() => _displacement = GetDisplacement(TimeStart, TimeEnd);
 
@@ -168,7 +186,7 @@ namespace EilansPlugin
         }
     }
 
-    // 空速度事件
+    // 空速度事件区块
     public struct EmptySpeedEventPart : ISpeedEventPart
     {
         public double TimeStart { get; set; }
@@ -187,6 +205,10 @@ namespace EilansPlugin
 
         public double GetDisplacement(double timeStart, double timeEnd) => (timeEnd - timeStart) * ValueStart;
 
+        public double GetDisplacement(double time) => GetDisplacement(TimeStart, time);
+
+        public double GetDisplacement() => GetDisplacement(TimeStart, TimeEnd);
+
         public ISpeedEventPart[] Divide(double time) => new ISpeedEventPart[]
         {
             new LinearSpeedEventPart(TimeStart, time, ValueStart, ValueStart),
@@ -195,8 +217,10 @@ namespace EilansPlugin
     }
 
     // 缓动事件
-    public class CurveEvent : IEnumerable
+    public class CurveEvent : IEvent
     {
+        private const int LINEAR_SEARCH_THRESHOLD = 5;
+
         // 储存事件区块
         // 由于要使用二分查找，需要索引，所以用了List
         public List<ICurveEventPart> EventParts { get; set; }
@@ -218,22 +242,35 @@ namespace EilansPlugin
                 EventParts = new List<ICurveEventPart>() { new EmptyCurveEventPart(0, (double)initValue) };
         }
 
-        // 二分查找
+        // Sets
+        public void SetValueStart(int index, double value) => EventParts[index].ValueStart = value;
+
+        public void SetValueEnd(int index, double value) => EventParts[index].ValueEnd = value;
+
+        // 查找
         public int FindIndex(double time)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a ​​negative.");
+            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
 
             if (EventParts.Count == 1) return 0;
 
-            int i = 0;
-            int j = EventParts.Count - 1;
-
-            while (i <= j)
+            if (EventParts.Count <= LINEAR_SEARCH_THRESHOLD)
             {
-                int m = i + (j - i) / 2;
+                for (int i = 0; i < EventParts.Count; i++)
+                    if (EventParts[i].TimeStart <= time && EventParts[i].TimeEnd > time)
+                        return i;
+                return default;
+            }
 
-                if (EventParts[m].TimeStart > time) j = m - 1;
-                else if (EventParts[m].TimeEnd < time) i = m + 1;
+            int j = 0;
+            int k = EventParts.Count - 1;
+
+            while (j <= k)
+            {
+                int m = j + (k - j) / 2;
+
+                if (EventParts[m].TimeStart > time) k = m - 1;
+                else if (EventParts[m].TimeEnd < time) j = m + 1;
                 else return m;
             }
 
@@ -259,17 +296,22 @@ namespace EilansPlugin
         public void Clear() => Init(EventParts[0].ValueStart);
 
         // 复制
-        public CurveEvent Copy() => new CurveEvent(null)
+        public IEvent Copy() => new CurveEvent(null)
         {
             EventParts = new List<ICurveEventPart>(EventParts)
         };
     }
 
     // 速度事件
-    public class SpeedEvent : IEnumerable
+    public class SpeedEvent : IEvent
     {
+        private const int LINEAR_SEARCH_THRESHOLD = 5;
+
         // 储存事件区块
         public List<ISpeedEventPart> EventParts { get; set; }
+
+        // 位移缓存
+        public List<double> DisplacementCache { get; set; }
 
         public SpeedEvent(double? initValue) => Init(initValue);
 
@@ -280,30 +322,57 @@ namespace EilansPlugin
         public IEnumerator GetEnumerator() => EventParts.GetEnumerator();
 
         // 初始化
-        public void Init(double? initValue)
+        private void Init(double? initValue)
         {
             if (initValue == null)
+            {
                 EventParts = new List<ISpeedEventPart>() { };
+                DisplacementCache = new List<double>() { };
+            }
             else
+            {
                 EventParts = new List<ISpeedEventPart>() { new EmptySpeedEventPart(0, (double)initValue) };
+                DisplacementCache = new List<double>() { 0 };
+            }
         }
 
-        // 二分查找
+        // Sets
+        public void SetValueStart(int index, double value)
+        {
+            EventParts[index].ValueStart = value;
+            UpdateDisplacementsCache(index + 1, DisplacementCache.Count - 1);
+        }
+
+        public void SetValueEnd(int index, double value)
+        {
+            EventParts[index].ValueEnd = value;
+            UpdateDisplacementsCache(index + 1, DisplacementCache.Count - 1);
+        }
+
+        // 查找
         public int FindIndex(double time)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a ​​negative.");
+            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
 
             if (EventParts.Count == 1) return 0;
 
-            int i = 0;
-            int j = EventParts.Count - 1;
-
-            while (i <= j)
+            if (EventParts.Count <= LINEAR_SEARCH_THRESHOLD)
             {
-                int m = i + (j - i) / 2;
+                for (int i = 0; i < EventParts.Count; i++)
+                    if (EventParts[i].TimeStart <= time && EventParts[i].TimeEnd > time)
+                        return i;
+                return default;
+            }
 
-                if (EventParts[m].TimeStart > time) j = m - 1;
-                else if (EventParts[m].TimeEnd < time) i = m + 1;
+            int j = 0;
+            int k = EventParts.Count - 1;
+
+            while (j <= k)
+            {
+                int m = j + (k - j) / 2;
+
+                if (EventParts[m].TimeStart > time) k = m - 1;
+                else if (EventParts[m].TimeEnd < time) j = m + 1;
                 else return m;
             }
 
@@ -320,10 +389,16 @@ namespace EilansPlugin
             int i = FindIndex(time);
             double displacement = 0;
 
-            for (int j = 0; j < i; j++) displacement += EventParts[j].Displacement;
-            displacement += EventParts[i].GetDisplacement(EventParts[i].TimeStart, time);
+            displacement += DisplacementCache[i] + EventParts[i].GetDisplacement(time);
 
             return displacement;
+        }
+
+        // 更新位移缓存
+        public void UpdateDisplacementsCache(int from, int to)
+        {
+            for (int i = from; i <= to; i++)
+                DisplacementCache[i] = DisplacementCache[i - 1] + EventParts[i - 1].GetDisplacement();
         }
 
         // 切分
@@ -333,17 +408,20 @@ namespace EilansPlugin
             ISpeedEventPart[] dividedParts = EventParts[i].Divide(time);
 
             EventParts.RemoveAt(i);
-            EventParts.Insert(i, dividedParts[1]);
-            EventParts.Insert(i, dividedParts[0]);
+            EventParts.InsertRange(i, dividedParts);
+
+            DisplacementCache.Add(0);
+            UpdateDisplacementsCache(i + 1, DisplacementCache.Count - 1);
         }
 
         // 清空
         public void Clear() => Init(EventParts[0].ValueStart);
 
         // 复制
-        public SpeedEvent Copy() => new SpeedEvent(null)
+        public IEvent Copy() => new SpeedEvent(null)
         {
-            EventParts = new List<ISpeedEventPart>(EventParts)
+            EventParts = new List<ISpeedEventPart>(EventParts),
+            DisplacementCache = new List<double>(DisplacementCache)
         };
     }
 }
