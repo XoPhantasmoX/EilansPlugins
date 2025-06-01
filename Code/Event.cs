@@ -40,7 +40,7 @@ namespace EilansPlugin
         void SetValueEnd(int index, double value);
         int FindIndex(double time);
         double GetValue(double time);
-        void Divede(double time);
+        void Divide(double time);
         void Clear();
         IEvent Copy();
     }
@@ -282,7 +282,7 @@ namespace EilansPlugin
             EventParts[FindIndex(time)].GetValue(time);
 
         // 切分
-        public void Divede(double time)
+        public void Divide(double time)
         {
             int i = FindIndex(time);
             ICurveEventPart[] dividedParts = EventParts[i].Divide(time);
@@ -402,7 +402,7 @@ namespace EilansPlugin
         }
 
         // 切分
-        public void Divede(double time)
+        public void Divide(double time)
         {
             int i = FindIndex(time);
             ISpeedEventPart[] dividedParts = EventParts[i].Divide(time);
