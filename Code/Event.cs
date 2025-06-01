@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace EilansPlugin
 {
-    // 曲线事件区块接口
+    // 曲线事件接口
     public interface ICurveEvent
     {
         double TimeStart { get; set; }
@@ -18,7 +18,7 @@ namespace EilansPlugin
         ICurveEvent[] Divide(double time);
     }
 
-    // 速度事件区块接口
+    // 速度事件接口
     public interface ISpeedEvent
     {
         double TimeStart { get; set; }
@@ -33,7 +33,7 @@ namespace EilansPlugin
         ISpeedEvent[] Divide(double time);
     }
 
-    // 事件接口
+    // 事件集合接口
     public interface IEventCollection : IEnumerable
     {
         void SetValueStart(int index, double value);
@@ -44,7 +44,7 @@ namespace EilansPlugin
         void Clear();
     }
 
-    // 缓动事件区块
+    // 缓动事件
     public struct EasingCurveEvent : ICurveEvent
     {
         public double TimeStart { get; set; }
@@ -78,7 +78,7 @@ namespace EilansPlugin
         }
     }
 
-    // 空曲线事件区块
+    // 空曲线事件
     public struct EmptyCurveEvent : ICurveEvent
     {
         public double TimeStart { get; set; }
@@ -101,7 +101,7 @@ namespace EilansPlugin
         };
     }
 
-    // 线性速度事件区块
+    // 线性速度事件
     public struct LinearSpeedEvent : ISpeedEvent
     {
         public double TimeStart
@@ -185,7 +185,7 @@ namespace EilansPlugin
         }
     }
 
-    // 空速度事件区块
+    // 空速度事件
     public struct EmptySpeedEvent : ISpeedEvent
     {
         public double TimeStart { get; set; }
@@ -215,7 +215,7 @@ namespace EilansPlugin
         };
     }
 
-    // 缓动事件
+    // 缓动事件集合
     public class CurveEventCollection : IEventCollection
     {
         private const int LINEAR_SEARCH_THRESHOLD = 5;
@@ -301,7 +301,7 @@ namespace EilansPlugin
         };
     }
 
-    // 速度事件
+    // 速度事件集合
     public class SpeedEventCollection : IEventCollection
     {
         private const int LINEAR_SEARCH_THRESHOLD = 5;
