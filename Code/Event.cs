@@ -5,7 +5,7 @@ using System.Collections.Generic;
 // IndexZero 2025/5/30
 // 事件
 
-namespace EilansPlugin
+namespace EilansPlugins
 {
     // 曲线事件接口
     public interface ICurveEvent
