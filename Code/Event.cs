@@ -84,7 +84,7 @@ namespace EilansPlugin
         public double TimeStart { get; set; }
         public double TimeEnd { get => double.PositiveInfinity; set { } }
         public double ValueStart { get; set; }
-        public double ValueEnd { get => ValueStart; set { } }
+        public double ValueEnd { get => ValueStart; set => ValueStart = value; }
 
         public EmptyCurveEvent(double timeStart, double valueStart)
         {
@@ -191,7 +191,7 @@ namespace EilansPlugin
         public double TimeStart { get; set; }
         public double TimeEnd { get => double.PositiveInfinity; set { } }
         public double ValueStart { get; set; }
-        public double ValueEnd { get => ValueStart; set { } }
+        public double ValueEnd { get => ValueStart; set => ValueStart = value; }
         public double Displacement => double.PositiveInfinity;
 
         public EmptySpeedEvent(double timeStart, double valueStart)
