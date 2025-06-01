@@ -1,4 +1,4 @@
-namespace EilansPlugin
+namespace EilansPlugins
 {
     public class TimeManager
     {
