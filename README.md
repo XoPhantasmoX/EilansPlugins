@@ -44,8 +44,9 @@
   speedEvent.Divede(20);
 
   // 设置第一个事件区块的结束值以及下一个区块的起始值为200
-  speedEvent[0].ValueEnd = 200;
-  speedEvent[1].ValueStart = 200;
+  speedEvent.SetValueEnd(0, 200);
+  speedEvent.SetValueStart(1, 200);
+  // 不要像CurveEvent那样直接修改EventPart的值，除非你知道你在做什么！
 
   // 获取事件第15秒返回的值（速度）
   speedEvent.GetValue(15);
