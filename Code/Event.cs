@@ -10,27 +10,24 @@ namespace EilansPlugin
     // 曲线事件接口
     public interface ICurveEvent
     {
-        double TimeStart { get; set; }
-        double TimeEnd { get; set; }
+        double TimeStart { get; }
         double ValueStart { get; set; }
         double ValueEnd { get; set; }
-        double GetValue(double time);
-        ICurveEvent[] Divide(double time);
+        double GetValue(double time, double timeEnd);
+        ICurveEvent[] Divide(double time, double timeEnd);
     }
 
     // 速度事件接口
     public interface ISpeedEvent
     {
-        double TimeStart { get; set; }
-        double TimeEnd { get; set; }
+        double TimeStart { get; }
         double ValueStart { get; set; }
         double ValueEnd { get; set; }
-        double Displacement { get; }
-        double GetValue(double time);
-        double GetDisplacement();
-        double GetDisplacement(double time);
-        double GetDisplacement(double timeStart, double timeEnd);
-        ISpeedEvent[] Divide(double time);
+        double GetValue(double time, double timeEnd);
+        double GetDisplacement(double eventTimeEnd);
+        double GetDisplacement(double time, double eventTimeEnd);
+        double GetDisplacement(double timeStart, double timeEnd, double eventTimeEnd);
+        ISpeedEvent[] Divide(double time, double timeEnd);
     }
 
     // 事件集合接口
@@ -47,33 +44,33 @@ namespace EilansPlugin
     // 缓动事件
     public struct EasingCurveEvent : ICurveEvent
     {
-        public double TimeStart { get; set; }
-        public double TimeEnd { get; set; }
+        private double _timeStart;
+
+        public double TimeStart => _timeStart;
         public double ValueStart { get; set; }
         public double ValueEnd { get; set; }
         public TransfromType TransformType { get; set; }
         public EaseType EaseType { get; set; }
 
-        public EasingCurveEvent(double timeStart, double timeEnd, double valueStart, double valueEnd, TransfromType transfromType, EaseType easeType)
+        public EasingCurveEvent(double timeStart, double valueStart, double valueEnd, TransfromType transfromType, EaseType easeType)
         {
-            TimeStart = timeStart;
-            TimeEnd = timeEnd;
+            _timeStart = timeStart;
             ValueStart = valueStart;
             ValueEnd = valueEnd;
             TransformType = transfromType;
             EaseType = easeType;
         }
 
-        public double GetValue(double time) =>
-            ValueStart + Ease.GetEase(TransformType, EaseType, (time - TimeStart) / (TimeEnd - TimeStart)) * (ValueEnd - ValueStart);
+        public double GetValue(double time, double timeEnd) =>
+            ValueStart + Ease.GetEase(TransformType, EaseType, (time - TimeStart) / (timeEnd - TimeStart)) * (ValueEnd - ValueStart);
 
-        public ICurveEvent[] Divide(double time)
+        public ICurveEvent[] Divide(double time, double timeEnd)
         {
-            double value = GetValue(time);
+            double value = GetValue(time, timeEnd);
 
             return new ICurveEvent[] {
-                new EasingCurveEvent(TimeStart, time, ValueStart, value, TransformType, EaseType),
-                new EasingCurveEvent(time, TimeEnd, value, ValueEnd, TransformType, EaseType)
+                new EasingCurveEvent(TimeStart, ValueStart, value, TransformType, EaseType),
+                new EasingCurveEvent(time, value, ValueEnd, TransformType, EaseType)
             };
         }
     }
@@ -81,22 +78,23 @@ namespace EilansPlugin
     // 空曲线事件
     public struct EmptyCurveEvent : ICurveEvent
     {
-        public double TimeStart { get; set; }
-        public double TimeEnd { get => double.PositiveInfinity; set { } }
+        private double _timeStart;
+
+        public double TimeStart => _timeStart;
         public double ValueStart { get; set; }
         public double ValueEnd { get => ValueStart; set => ValueStart = value; }
 
         public EmptyCurveEvent(double timeStart, double valueStart)
         {
-            TimeStart = timeStart;
+            _timeStart = timeStart;
             ValueStart = valueStart;
         }
 
-        public double GetValue(double time) => ValueStart;
+        public double GetValue(double time, double timeEnd) => ValueStart;
 
-        public ICurveEvent[] Divide(double time) => new ICurveEvent[]
+        public ICurveEvent[] Divide(double time, double timeEnd) => new ICurveEvent[]
         {
-            new EasingCurveEvent(TimeStart, time, ValueStart, ValueStart, TransfromType.Linear, EaseType.In),
+            new EasingCurveEvent(TimeStart, ValueStart, ValueStart, TransfromType.Linear, EaseType.In),
             new EmptyCurveEvent(time, ValueStart)
         };
     }
@@ -104,83 +102,38 @@ namespace EilansPlugin
     // 线性速度事件
     public struct LinearSpeedEvent : ISpeedEvent
     {
-        public double TimeStart
-        {
-            get => _timeStart;
-            set
-            {
-                _timeStart = value;
-                UpdateDisplacement();
-            }
-        }
-
-        public double TimeEnd
-        {
-            get => _timeEnd;
-            set
-            {
-                _timeEnd = value;
-                UpdateDisplacement();
-            }
-        }
-
-        public double ValueStart
-        {
-            get => _valueStart;
-            set
-            {
-                _valueStart = value;
-                UpdateDisplacement();
-            }
-        }
-
-        public double ValueEnd
-        {
-            get => _valueEnd;
-            set
-            {
-                _valueEnd = value;
-                UpdateDisplacement();
-            }
-        }
-
-        public double Displacement => _displacement;
-
         private double _timeStart;
-        private double _timeEnd;
-        private double _valueStart;
-        private double _valueEnd;
-        private double _displacement;
 
-        public LinearSpeedEvent(double timeStart, double timeEnd, double valueStart, double valueEnd)
+        public double TimeStart => _timeStart;
+
+        public double ValueStart { get; set; }
+
+        public double ValueEnd { get; set; }
+
+        public LinearSpeedEvent(double timeStart, double valueStart, double valueEnd)
         {
             _timeStart = timeStart;
-            _timeEnd = timeEnd;
-            _valueStart = valueStart;
-            _valueEnd = valueEnd;
-            _displacement = 0;
-            UpdateDisplacement();
+            ValueStart = valueStart;
+            ValueEnd = valueEnd;
         }
 
-        public double GetValue(double time) =>
-            ValueStart + (time - TimeStart) / (TimeEnd - TimeStart) * (ValueEnd - ValueStart);
+        public double GetValue(double time, double timeEnd) =>
+            ValueStart + (time - TimeStart) / (timeEnd - TimeStart) * (ValueEnd - ValueStart);
 
-        public double GetDisplacement(double timeStart, double timeEnd) =>
-            (GetValue(timeStart) + GetValue(timeEnd)) * (timeEnd - timeStart) / 2;
+        public double GetDisplacement(double timeStart, double timeEnd, double eventTimeEnd) =>
+            (GetValue(timeStart, eventTimeEnd) + GetValue(timeEnd, eventTimeEnd)) * (timeEnd - timeStart) / 2;
 
-        public double GetDisplacement(double time) => GetDisplacement(TimeStart, time);
+        public double GetDisplacement(double time, double eventTimeEnd) => GetDisplacement(TimeStart, time, eventTimeEnd);
 
-        public double GetDisplacement() => GetDisplacement(TimeStart, TimeEnd);
+        public double GetDisplacement(double eventTimeEnd) => GetDisplacement(TimeStart, eventTimeEnd, eventTimeEnd);
 
-        private void UpdateDisplacement() => _displacement = GetDisplacement(TimeStart, TimeEnd);
-
-        public ISpeedEvent[] Divide(double time)
+        public ISpeedEvent[] Divide(double time, double timeEnd)
         {
-            double value = GetValue(time);
+            double value = GetValue(time, timeEnd);
 
             return new ISpeedEvent[] {
-                new LinearSpeedEvent(TimeStart, time, ValueStart, value),
-                new LinearSpeedEvent(time, TimeEnd, value, ValueEnd)
+                new LinearSpeedEvent(TimeStart, ValueStart, value),
+                new LinearSpeedEvent(time, value, ValueEnd)
             };
         }
     }
@@ -188,29 +141,29 @@ namespace EilansPlugin
     // 空速度事件
     public struct EmptySpeedEvent : ISpeedEvent
     {
-        public double TimeStart { get; set; }
-        public double TimeEnd { get => double.PositiveInfinity; set { } }
+        private double _timeStart;
+
+        public double TimeStart => _timeStart;
         public double ValueStart { get; set; }
         public double ValueEnd { get => ValueStart; set => ValueStart = value; }
-        public double Displacement => double.PositiveInfinity;
 
         public EmptySpeedEvent(double timeStart, double valueStart)
         {
-            TimeStart = timeStart;
+            _timeStart = timeStart;
             ValueStart = valueStart;
         }
 
-        public double GetValue(double time) => ValueStart;
+        public double GetValue(double time, double timeEnd) => ValueStart;
 
-        public double GetDisplacement(double timeStart, double timeEnd) => (timeEnd - timeStart) * ValueStart;
+        public double GetDisplacement(double timeStart, double timeEnd, double eventTimeEnd) => (timeEnd - timeStart) * ValueStart;
 
-        public double GetDisplacement(double time) => GetDisplacement(TimeStart, time);
+        public double GetDisplacement(double time, double eventTimeEnd) => GetDisplacement(TimeStart, time, eventTimeEnd);
 
-        public double GetDisplacement() => GetDisplacement(TimeStart, TimeEnd);
+        public double GetDisplacement(double eventTimeEnd) => GetDisplacement(TimeStart, eventTimeEnd);
 
-        public ISpeedEvent[] Divide(double time) => new ISpeedEvent[]
+        public ISpeedEvent[] Divide(double time, double _) => new ISpeedEvent[]
         {
-            new LinearSpeedEvent(TimeStart, time, ValueStart, ValueStart),
+            new LinearSpeedEvent(TimeStart, ValueStart, ValueStart),
             new EmptySpeedEvent(time, ValueStart)
         };
     }
@@ -223,8 +176,8 @@ namespace EilansPlugin
 
         public CurveEventCollection(double initValue) =>
             Events = new List<ICurveEvent>() { new EmptyCurveEvent(0, initValue) };
-        
-        public CurveEventCollection() => Events = new List<ICurveEvent>() { };
+
+        private CurveEventCollection() { }
 
         // 索引器
         public ICurveEvent this[int index] => Events[index];
@@ -247,7 +200,7 @@ namespace EilansPlugin
             if (Events.Count <= LINEAR_SEARCH_THRESHOLD)
             {
                 for (int i = 0; i < Events.Count; i++)
-                    if (Events[i].TimeStart <= time && Events[i].TimeEnd > time)
+                    if (Events[i].TimeStart <= time && GetTimeEnd(i) > time)
                         return i;
                 return default;
             }
@@ -260,7 +213,7 @@ namespace EilansPlugin
                 int m = j + (k - j) / 2;
 
                 if (Events[m].TimeStart > time) k = m - 1;
-                else if (Events[m].TimeEnd < time) j = m + 1;
+                else if (GetTimeEnd(m) < time) j = m + 1;
                 else return m;
             }
 
@@ -268,14 +221,17 @@ namespace EilansPlugin
         }
 
         // 取值
-        public double GetValue(double time) =>
-            Events[FindIndex(time)].GetValue(time);
+        public double GetValue(double time)
+        {
+            int i = FindIndex(time);
+            return Events[i].GetValue(time, GetTimeEnd(i));
+        }
 
         // 切分
         public void Divide(double time)
         {
             int i = FindIndex(time);
-            ICurveEvent[] dividedParts = Events[i].Divide(time);
+            ICurveEvent[] dividedParts = Events[i].Divide(time, GetTimeEnd(i));
 
             Events.RemoveAt(i);
             Events.Insert(i, dividedParts[1]);
@@ -290,6 +246,12 @@ namespace EilansPlugin
         {
             Events = new List<ICurveEvent>(Events)
         };
+
+        private double GetTimeEnd(int index)
+        {
+            if (index == Events.Count - 1) return double.PositiveInfinity;
+            else return Events[index + 1].TimeStart;
+        }
     }
 
     // 速度事件集合
@@ -305,7 +267,7 @@ namespace EilansPlugin
             DisplacementCache = new List<double>() { 0 };
         }
 
-        public SpeedEventCollection() { }
+        private SpeedEventCollection() { }
 
         // 索引器
         public ISpeedEvent this[int index] => Events[index];
@@ -317,13 +279,13 @@ namespace EilansPlugin
         public void SetValueStart(int index, double value)
         {
             Events[index].ValueStart = value;
-            UpdateDisplacementsCache(index + 1, DisplacementCache.Count - 1);
+            UpdateDisplacementsCache(index + 1);
         }
 
         public void SetValueEnd(int index, double value)
         {
             Events[index].ValueEnd = value;
-            UpdateDisplacementsCache(index + 1, DisplacementCache.Count - 1);
+            UpdateDisplacementsCache(index + 1);
         }
 
         // 查找
@@ -336,7 +298,7 @@ namespace EilansPlugin
             if (Events.Count <= LINEAR_SEARCH_THRESHOLD)
             {
                 for (int i = 0; i < Events.Count; i++)
-                    if (Events[i].TimeStart <= time && Events[i].TimeEnd > time)
+                    if (Events[i].TimeStart <= time && GetTimeEnd(i) > time)
                         return i;
                 return default;
             }
@@ -349,7 +311,7 @@ namespace EilansPlugin
                 int m = j + (k - j) / 2;
 
                 if (Events[m].TimeStart > time) k = m - 1;
-                else if (Events[m].TimeEnd < time) j = m + 1;
+                else if (GetTimeEnd(m) < time) j = m + 1;
                 else return m;
             }
 
@@ -357,8 +319,11 @@ namespace EilansPlugin
         }
 
         // 取值
-        public double GetValue(double time) =>
-            Events[FindIndex(time)].GetValue(time);
+        public double GetValue(double time)
+        {
+            int i = FindIndex(time);
+            return Events[i].GetValue(time, GetTimeEnd(i));
+        }
 
         // 获取位移
         public double GetDisplacement(double time)
@@ -366,29 +331,30 @@ namespace EilansPlugin
             int i = FindIndex(time);
             double displacement = 0;
 
-            displacement += DisplacementCache[i] + Events[i].GetDisplacement(time);
+            displacement += DisplacementCache[i] + Events[i].GetDisplacement(time, GetTimeEnd(i));
 
             return displacement;
         }
 
         // 更新位移缓存
-        private void UpdateDisplacementsCache(int from, int to)
+        private void UpdateDisplacementsCache(int from)
         {
-            for (int i = from; i <= to; i++)
-                DisplacementCache[i] = DisplacementCache[i - 1] + Events[i - 1].GetDisplacement();
+            if (from == 0) DisplacementCache[from++] = 0;
+            for (int i = from; i < DisplacementCache.Count; i++)
+                DisplacementCache[i] = DisplacementCache[i - 1] + Events[i - 1].GetDisplacement(GetTimeEnd(i - 1));
         }
 
         // 切分
         public void Divide(double time)
         {
             int i = FindIndex(time);
-            ISpeedEvent[] dividedParts = Events[i].Divide(time);
+            ISpeedEvent[] dividedParts = Events[i].Divide(time, GetTimeEnd(i));
 
             Events.RemoveAt(i);
             Events.InsertRange(i, dividedParts);
 
             DisplacementCache.Add(0);
-            UpdateDisplacementsCache(i + 1, DisplacementCache.Count - 1);
+            UpdateDisplacementsCache(i + 1);
         }
 
         // 清空
@@ -404,5 +370,11 @@ namespace EilansPlugin
             Events = new List<ISpeedEvent>(Events),
             DisplacementCache = new List<double>(DisplacementCache)
         };
+
+        private double GetTimeEnd(int index)
+        {
+            if (index == Events.Count - 1) return double.PositiveInfinity;
+            else return Events[index + 1].TimeStart;
+        }
     }
 }
