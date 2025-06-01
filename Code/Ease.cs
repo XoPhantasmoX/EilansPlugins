@@ -3,7 +3,7 @@
 // IndexZero 2025/5/30
 // 数学计算
 
-namespace EilansPlugin
+namespace EilansPlugins
 {
     public enum EaseType { In, Out, InOut }
 
