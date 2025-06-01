@@ -1,14 +1,14 @@
-﻿namespace EilansPlugin
+namespace EilansPlugin
 {
     public class TimeManager
     {
-        public CurveEvent BPMEvent { get; set; }
+        public CurveEventCollection BPMEvent { get; set; }
         public double SecTimer { get; set; }
         public double BPM => GetBPM(SecTimer);
         public double Beat => GetBeat(SecTimer);
         public double BeatTimer => SecTimer / Beat;
 
-        public TimeManager(double initBPM) => BPMEvent = new CurveEvent(initBPM);
+        public TimeManager(double initBPM) => BPMEvent = new CurveEventCollection(initBPM);
 
         public double GetBPM(double secTime) => BPMEvent.GetValue(secTime);
 
