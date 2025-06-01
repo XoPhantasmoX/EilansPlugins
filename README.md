@@ -20,7 +20,7 @@
   CurveEvent curveEvent = new CurveEvent(0);
 
   // 从20秒切分事件
-  curveEvent.Divede(20);
+  curveEvent.Divide(20);
 
   // 切换缓动类型
   if (curveEvent[0] is EasingCurveEventPart easingCurveEventPart)
@@ -41,7 +41,7 @@
   SpeedEvent speedEvent = new SpeedEvent(0);
 
   // 从20秒切分事件
-  speedEvent.Divede(20);
+  speedEvent.Divide(20);
 
   // 设置第一个事件区块的结束值以及下一个区块的起始值为200
   speedEvent.SetValueEnd(0, 200);
