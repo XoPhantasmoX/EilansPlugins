@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 // IndexZero 2025/5/30
 // 事件
@@ -33,6 +34,7 @@ namespace EilansPlugin
     // 事件集合接口
     public interface IEventCollection : IEnumerable
     {
+        void SetTimeStart(int index, double time);
         void SetValueStart(int index, double value);
         void SetValueEnd(int index, double value);
         int FindIndex(double time);
@@ -44,9 +46,7 @@ namespace EilansPlugin
     // 缓动事件
     public struct EasingCurveEvent : ICurveEvent
     {
-        private double _timeStart;
-
-        public double TimeStart => _timeStart;
+        public double TimeStart { get; set; }
         public double ValueStart { get; set; }
         public double ValueEnd { get; set; }
         public TransfromType TransformType { get; set; }
@@ -54,7 +54,7 @@ namespace EilansPlugin
 
         public EasingCurveEvent(double timeStart, double valueStart, double valueEnd, TransfromType transfromType, EaseType easeType)
         {
-            _timeStart = timeStart;
+            TimeStart = timeStart;
             ValueStart = valueStart;
             ValueEnd = valueEnd;
             TransformType = transfromType;
@@ -186,9 +186,26 @@ namespace EilansPlugin
         public IEnumerator GetEnumerator() => Events.GetEnumerator();
 
         // Sets
-        public void SetValueStart(int index, double value) => Events[index].ValueStart = value;
+        public void SetTimeStart(int index, double time)
+        {
+            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
+            if (index == 0) throw new ArgumentException("The first of the event can't be set.");
 
-        public void SetValueEnd(int index, double value) => Events[index].ValueEnd = value;
+            Merge(index - 1, index);
+            Divide(time);
+        }
+
+        public void SetValueStart(int index, double value)
+        {
+            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
+            Events[index].ValueStart = value;
+        }
+
+        public void SetValueEnd(int index, double value)
+        {
+            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
+            Events[index].ValueEnd = value;
+        }
 
         // 查找
         public int FindIndex(double time)
@@ -231,15 +248,28 @@ namespace EilansPlugin
         public void Divide(double time)
         {
             int i = FindIndex(time);
-            ICurveEvent[] dividedParts = Events[i].Divide(time, GetTimeEnd(i));
+            ICurveEvent[] dividedEvents = Events[i].Divide(time, GetTimeEnd(i));
 
             Events.RemoveAt(i);
-            Events.Insert(i, dividedParts[1]);
-            Events.Insert(i, dividedParts[0]);
+            Events.Insert(i, dividedEvents[1]);
+            Events.Insert(i, dividedEvents[0]);
+        }
+
+        // 合并
+        public void Merge(int from, int to)
+        {
+
+            if (from < 0 && from >= Events.Count || to < 0 && to >= Events.Count)
+                throw new ArgumentException("Index out of range.");
+
+            ICurveEvent MergedEvent = new EasingCurveEvent(Events[from].TimeStart, Events[from].ValueStart, Events[to].ValueEnd, TransfromType.Linear, EaseType.In);
+
+            Events.RemoveRange(from, to - from + 1);
+            Events.Insert(from, MergedEvent);
         }
 
         // 清空
-        public void Clear() => Events = new List<ICurveEvent>() { new EmptyCurveEvent(0, Events[0].TimeStart) };
+        public void Clear() => Events = new List<ICurveEvent>() { new EmptyCurveEvent(0, Events[0].ValueStart) };
 
         // 复制
         public CurveEventCollection Copy() => new CurveEventCollection()
@@ -276,6 +306,17 @@ namespace EilansPlugin
         public IEnumerator GetEnumerator() => Events.GetEnumerator();
 
         // Sets
+        public void SetTimeStart(int index, double time)
+        {
+            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
+            if (index == 0) throw new ArgumentException("The first of the event can't be set.");
+
+            Merge(index - 1, index);
+            Divide(time);
+
+            UpdateDisplacementsCache(index);
+        }
+
         public void SetValueStart(int index, double value)
         {
             Events[index].ValueStart = value;
@@ -357,10 +398,26 @@ namespace EilansPlugin
             UpdateDisplacementsCache(i + 1);
         }
 
+        // 合并
+        public void Merge(int from, int to)
+        {
+
+            if (from < 0 && from >= Events.Count || to < 0 && to >= Events.Count)
+                throw new ArgumentException("Index out of range.");
+
+            ISpeedEvent MergedEvent = new LinearSpeedEvent(Events[from].TimeStart, Events[from].ValueStart, Events[to].ValueEnd);
+
+            Events.RemoveRange(from, to - from + 1);
+            Events.Insert(from, MergedEvent);
+
+            DisplacementCache.RemoveRange(from + 1, to - from);
+            UpdateDisplacementsCache(from + 1);
+        }
+
         // 清空
         public void Clear()
         {
-            Events = new List<ISpeedEvent>() { new EmptySpeedEvent(0, Events[0].TimeStart) };
+            Events = new List<ISpeedEvent>() { new EmptySpeedEvent(0, Events[0].ValueStart) };
             DisplacementCache = new List<double>() { 0 };
         }
 
