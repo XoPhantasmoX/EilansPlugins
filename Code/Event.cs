@@ -84,7 +84,7 @@ namespace EilansPlugin
         public double TimeStart { get; set; }
         public double TimeEnd { get => double.PositiveInfinity; set { } }
         public double ValueStart { get; set; }
-        public double ValueEnd { get => TimeStart; set { } }
+        public double ValueEnd { get => ValueStart; set { } }
 
         public EmptyCurveEvent(double timeStart, double valueStart)
         {
