@@ -2,9 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace EilansPlugin
+namespace EilansPlugins
 {
-    namespace Container
+    namespace Collections
     {
         public class PriorityList<T> : ICollection<T>, IEnumerable<T>, IEnumerable, IReadOnlyCollection<T>, ICollection
         {
