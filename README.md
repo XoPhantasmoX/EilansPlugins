@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 EilansPlugins 提供了一套完整的解决方案，用于音乐游戏中常见需求的开发组件：
+
 📈 实现动画过渡的缓动函数  
 ⏱️ 处理BPM变化的时间计算  
 🔁 控制动态变化的事件曲线系统  
