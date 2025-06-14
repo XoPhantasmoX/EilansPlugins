@@ -1,86 +1,148 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-
-// IndexZero 2025/5/30
-// 事件
+﻿using System;
 
 namespace EilansPlugins
 {
-    // 曲线事件接口
-    public interface ICurveEvent
+    /// <summary>
+    /// Event Interface.
+    /// </summary>
+    public interface IEvent
     {
+        /// <summary>
+        /// The start time of the event.
+        /// </summary>
         double TimeStart { get; }
+
+        /// <summary>
+        /// The start value of the event.
+        /// </summary>
         double ValueStart { get; set; }
+
+        /// <summary>
+        /// The end value of the event.
+        /// </summary>
         double ValueEnd { get; set; }
-        double GetValue(double time, double timeEnd);
-        ICurveEvent[] Divide(double time, double timeEnd);
+
+        /// <summary>
+        /// Get the value of the event.
+        /// </summary>
+        /// <param name="time">The time when you want to get the value.</param>
+        /// <param name="eventTimeEnd">The end time of the event.</param>
+        /// <returns>The value of the event.</returns>
+        /// <exception cref="ArgumentException"></exception>
+        double GetValue(double time, double eventTimeEnd);
     }
 
-    // 速度事件接口
-    public interface ISpeedEvent
+    /// <summary>
+    /// Curve event Interface.
+    /// </summary>
+    public interface ICurveEvent : IEvent
     {
-        double TimeStart { get; }
-        double ValueStart { get; set; }
-        double ValueEnd { get; set; }
-        double GetValue(double time, double timeEnd);
+        /// <summary>
+        /// Split the event.
+        /// </summary>
+        /// <param name="time">The time when you want to split the event.</param>
+        /// <param name="eventTimeEnd">The end time of the event.</param>
+        /// <returns>Two split events.</returns>
+        ICurveEvent[] Split(double time, double eventTimeEnd);
+    }
+
+    /// <summary>
+    /// Speed event Interface.
+    /// </summary>
+    public interface ISpeedEvent : IEvent
+    {
+        /// <summary>
+        /// Gets the displacement of the entire event.
+        /// </summary>
+        /// <param name="eventTimeEnd">The end time of the event.</param>
+        /// <returns>The displacement of the entire event.</returns>
         double GetDisplacement(double eventTimeEnd);
+
+        /// <summary>
+        /// Gets the displacement from the beginning to the specified time.
+        /// </summary>
+        /// <param name="time">The time when you want to get the displacement.</param>
+        /// <param name="eventTimeEnd">The end time of the event.</param>
+        /// <returns>The displacement from the beginning to the specified time.</returns>
         double GetDisplacement(double time, double eventTimeEnd);
+
+        /// <summary>
+        /// Gets the displacement of the specified segment.
+        /// </summary>
+        /// <param name="timeStart">The start time when you want to get the displacement.</param>
+        /// <param name="timeEnd">The end time when you want to get the displacement.</param>
+        /// <param name="eventTimeEnd">The end time of the event.</param>
+        /// <returns>The displacement of the specified segment.</returns>
         double GetDisplacement(double timeStart, double timeEnd, double eventTimeEnd);
-        ISpeedEvent[] Divide(double time, double timeEnd);
+
+        /// <summary>
+        /// Split the event.
+        /// </summary>
+        /// <param name="time">The time when you want to split the event.</param>
+        /// <param name="eventTimeEnd">The end time of the event.</param>
+        /// <returns>Two split events.</returns>
+        ISpeedEvent[] Divide(double time, double eventTimeEnd);
     }
 
-    // 事件集合接口
-    public interface IEventCollection : IEnumerable
-    {
-        void SetTimeStart(int index, double time);
-        void SetValueStart(int index, double value);
-        void SetValueEnd(int index, double value);
-        int FindIndex(double time);
-        double GetValue(double time);
-        void Divide(double time);
-        void Clear();
-    }
-
-    // 缓动事件
-    public struct EasingCurveEvent : ICurveEvent
+    /// <summary>
+    /// Easing curve event.
+    /// </summary>
+    public class EasingCurveEvent : ICurveEvent
     {
         public double TimeStart { get; set; }
         public double ValueStart { get; set; }
         public double ValueEnd { get; set; }
-        public TransfromType TransformType { get; set; }
-        public EaseType EaseType { get; set; }
 
-        public EasingCurveEvent(double timeStart, double valueStart, double valueEnd, TransfromType transfromType, EaseType easeType)
+        /// <summary>
+        /// The type of transition.
+        /// </summary>
+        public TransformType TransformType { get; set; }
+
+        /// <summary>
+        /// The type of easing.
+        /// </summary>
+        public EasingType EasingType { get; set; }
+
+        public EasingCurveEvent(double timeStart, double valueStart, double valueEnd, TransformType transfromType, EasingType easeType)
         {
             TimeStart = timeStart;
             ValueStart = valueStart;
             ValueEnd = valueEnd;
             TransformType = transfromType;
-            EaseType = easeType;
+            EasingType = easeType;
         }
 
-        public double GetValue(double time, double timeEnd)
+        public double GetValue(double time, double eventTimeEnd)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            return ValueStart + Ease.GetEase(TransformType, EaseType, (time - TimeStart) / (timeEnd - TimeStart)) * (ValueEnd - ValueStart);
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (time < TimeStart || time > eventTimeEnd)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
+
+            return ValueStart + Ease.GetEase(TransformType, EasingType, (time - TimeStart) / (eventTimeEnd - TimeStart)) * (ValueEnd - ValueStart);
         }
 
-        public ICurveEvent[] Divide(double time, double timeEnd)
+        public ICurveEvent[] Split(double time, double eventTimeEnd)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (time < TimeStart || time > eventTimeEnd)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
 
-            double value = GetValue(time, timeEnd);
+            double value = GetValue(time, eventTimeEnd);
 
-            return new ICurveEvent[] {
-                new EasingCurveEvent(TimeStart, ValueStart, value, TransformType, EaseType),
-                new EasingCurveEvent(time, value, ValueEnd, TransformType, EaseType)
+            return new ICurveEvent[]
+            {
+                new EasingCurveEvent(TimeStart, ValueStart, value, TransformType, EasingType),
+                new EasingCurveEvent(time, value, ValueEnd, TransformType, EasingType)
             };
         }
     }
 
-    // 空曲线事件
-    public struct EmptyCurveEvent : ICurveEvent
+    /// <summary>
+    /// Empty curve event, with an infinite end time.
+    /// </summary>
+    public class EmptyCurveEvent : ICurveEvent
     {
         private double _timeStart;
 
@@ -94,31 +156,33 @@ namespace EilansPlugins
             ValueStart = valueStart;
         }
 
-        public double GetValue(double time, double timeEnd)
+        public double GetValue(double time, double _ = 0)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (time < TimeStart)
+                throw new ArgumentException("time can't be smaller than TimeStart.");
 
             return ValueStart;
         }
 
-        public ICurveEvent[] Divide(double time, double timeEnd)
+        public ICurveEvent[] Split(double time, double _ = 0)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (time < TimeStart)
+                throw new ArgumentException("time can't be smaller than TimeStart.");
 
             return new ICurveEvent[]
             {
-                new EasingCurveEvent(TimeStart, ValueStart, ValueStart, TransfromType.Linear, EaseType.In),
+                new EasingCurveEvent(TimeStart, ValueStart, ValueStart, TransformType.Linear, EasingType.In),
                 new EmptyCurveEvent(time, ValueStart)
             };
         }
     }
 
-    // 线性速度事件
-    public struct LinearSpeedEvent : ISpeedEvent
+    /// <summary>
+    /// Linear speed event.
+    /// </summary>
+    public class LinearSpeedEvent : ISpeedEvent
     {
-        private double _timeStart;
+        private readonly double _timeStart;
 
         public double TimeStart => _timeStart;
 
@@ -133,44 +197,56 @@ namespace EilansPlugins
             ValueEnd = valueEnd;
         }
 
-        public double GetValue(double time, double timeEnd)
+        public double GetValue(double time, double eventTimeEnd)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (time < TimeStart || time > eventTimeEnd)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
 
-            return ValueStart + (time - TimeStart) / (timeEnd - TimeStart) * (ValueEnd - ValueStart);
+            return ValueStart + (time - TimeStart) / (eventTimeEnd - TimeStart) * (ValueEnd - ValueStart);
         }
 
         public double GetDisplacement(double timeStart, double timeEnd, double eventTimeEnd)
         {
-            if (timeStart < 0) throw new ArgumentException("\"timeStart\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
-            if (timeStart > timeEnd) throw new ArgumentException("\"timeStart\" can't be bigger than \"timeEnd\".");
-            if (eventTimeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (timeStart < TimeStart || timeStart > eventTimeEnd)
+                throw new ArgumentException("timeStart must be between TimeStart and eventTimeEnd (inclusive).");
+            if (timeEnd < TimeStart || timeEnd > eventTimeEnd)
+                throw new ArgumentException("timeEnd must be between TimeStart and eventTimeEnd (inclusive).");
+            if (timeEnd < timeStart)
+                throw new ArgumentException("timeEnd must be greater than timeStart.");
 
             return (GetValue(timeStart, eventTimeEnd) + GetValue(timeEnd, eventTimeEnd)) * (timeEnd - timeStart) / 2;
         }
 
         public double GetDisplacement(double time, double eventTimeEnd)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (eventTimeEnd < 0) throw new ArgumentException("\"eventTimeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (time < TimeStart || time > eventTimeEnd)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
 
             return GetDisplacement(TimeStart, time, eventTimeEnd);
         }
 
         public double GetDisplacement(double eventTimeEnd)
         {
-            if (eventTimeEnd < 0) throw new ArgumentException("\"eventTimeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+
             return GetDisplacement(TimeStart, eventTimeEnd, eventTimeEnd);
         }
 
-        public ISpeedEvent[] Divide(double time, double timeEnd)
+        public ISpeedEvent[] Divide(double time, double eventTimeEnd)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (time < TimeStart || time > eventTimeEnd)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
 
-            double value = GetValue(time, timeEnd);
+            double value = GetValue(time, eventTimeEnd);
 
             return new ISpeedEvent[] {
                 new LinearSpeedEvent(TimeStart, ValueStart, value),
@@ -179,8 +255,10 @@ namespace EilansPlugins
         }
     }
 
-    // 空速度事件
-    public struct EmptySpeedEvent : ISpeedEvent
+    /// <summary>
+    /// Empty speed event, with an infinite end time.
+    /// </summary>
+    public class EmptySpeedEvent : ISpeedEvent
     {
         private double _timeStart;
 
@@ -194,401 +272,56 @@ namespace EilansPlugins
             ValueStart = valueStart;
         }
 
-        public double GetValue(double time, double timeEnd)
+        public double GetValue(double time, double _ = 0)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (time < TimeStart)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
 
             return ValueStart;
         }
 
         public double GetDisplacement(double timeStart, double timeEnd, double eventTimeEnd)
         {
-            if (timeStart < 0) throw new ArgumentException("\"timeStart\" can't be a negative.");
-            if (timeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
-            if (timeStart > timeEnd) throw new ArgumentException("\"timeStart\" can't be bigger than \"timeEnd\".");
-            if (eventTimeEnd < 0) throw new ArgumentException("\"timeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (timeStart < TimeStart || timeStart > eventTimeEnd)
+                throw new ArgumentException("timeStart must be between TimeStart and eventTimeEnd (inclusive).");
+            if (timeEnd < TimeStart || timeEnd > eventTimeEnd)
+                throw new ArgumentException("timeEnd must be between TimeStart and eventTimeEnd (inclusive).");
+            if (timeEnd < timeStart)
+                throw new ArgumentException("timeEnd must be greater than timeStart.");
 
             return (timeEnd - timeStart) * ValueStart;
         }
 
         public double GetDisplacement(double time, double eventTimeEnd)
         {
-
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-            if (eventTimeEnd < 0) throw new ArgumentException("\"eventTimeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
+            if (time < TimeStart || time > eventTimeEnd)
+                throw new ArgumentException("time must be between TimeStart and eventTimeEnd (inclusive).");
 
             return GetDisplacement(TimeStart, time, eventTimeEnd);
         }
 
         public double GetDisplacement(double eventTimeEnd)
         {
-            if (eventTimeEnd < 0) throw new ArgumentException("\"eventTimeEnd\" can't be a negative.");
+            if (eventTimeEnd <= TimeStart)
+                throw new ArgumentException("eventTimeEnd must be greater than TimeStart.");
 
-            return GetDisplacement(TimeStart, eventTimeEnd);
+            return GetDisplacement(TimeStart, eventTimeEnd, eventTimeEnd);
         }
 
-        public ISpeedEvent[] Divide(double time, double _)
+        public ISpeedEvent[] Divide(double time, double _ = 0)
         {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
+            if (time < TimeStart)
+                throw new ArgumentException("time can't be smaller than TimeStart.");
 
             return new ISpeedEvent[]
             {
                 new LinearSpeedEvent(TimeStart, ValueStart, ValueStart),
                 new EmptySpeedEvent(time, ValueStart)
             };
-        }
-    }
-
-    // 缓动事件集合
-    public class CurveEventCollection : IEventCollection
-    {
-        private const int LINEAR_SEARCH_THRESHOLD = 5;
-        private List<ICurveEvent> Events { get; set; }
-
-        public CurveEventCollection(double initValue) =>
-            Events = new List<ICurveEvent>() { new EmptyCurveEvent(0, initValue) };
-
-        private CurveEventCollection() { }
-
-        // 索引器
-        public ICurveEvent this[int index]
-        {
-            get
-            {
-                if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-                return Events[index];
-            }
-        }
-
-        // 迭代器
-        public IEnumerator GetEnumerator() => Events.GetEnumerator();
-
-        // Gets
-        public double GetValueStart(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            return Events[index].ValueStart;
-        }
-
-        public double GetValueEnd(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            return Events[index].ValueEnd;
-        }
-
-        public double GetTimeStart(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            return Events[index].TimeStart;
-        }
-
-        public double GetTimeEnd(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-
-            if (index == Events.Count - 1) return double.PositiveInfinity;
-            else return Events[index + 1].TimeStart;
-        }
-
-        // Sets
-        public void SetTimeStart(int index, double time)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            if (index == 0) throw new ArgumentException("The first of the event can't be set.");
-
-            Merge(index - 1, index);
-            Divide(time);
-        }
-
-        public void SetValueStart(int index, double value)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            Events[index].ValueStart = value;
-        }
-
-        public void SetValueEnd(int index, double value)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            Events[index].ValueEnd = value;
-        }
-
-        // 查找
-        public int FindIndex(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            if (Events.Count == 1) return 0;
-
-            if (Events.Count <= LINEAR_SEARCH_THRESHOLD)
-            {
-                for (int i = 0; i < Events.Count; i++)
-                    if (Events[i].TimeStart <= time && GetTimeEnd(i) > time)
-                        return i;
-                return default;
-            }
-
-            int j = 0;
-            int k = Events.Count - 1;
-
-            while (j <= k)
-            {
-                int m = j + (k - j) / 2;
-
-                if (Events[m].TimeStart > time) k = m - 1;
-                else if (GetTimeEnd(m) < time) j = m + 1;
-                else return m;
-            }
-
-            return default;
-        }
-
-        // 取值
-        public double GetValue(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            int i = FindIndex(time);
-            return Events[i].GetValue(time, GetTimeEnd(i));
-        }
-
-        // 切分
-        public void Divide(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            int i = FindIndex(time);
-            ICurveEvent[] dividedEvents = Events[i].Divide(time, GetTimeEnd(i));
-
-            Events.RemoveAt(i);
-            Events.Insert(i, dividedEvents[1]);
-            Events.Insert(i, dividedEvents[0]);
-        }
-
-        // 合并
-        public void Merge(int from, int to)
-        {
-            if (from < 0 && from >= Events.Count || to < 0 && to >= Events.Count)
-                throw new ArgumentException("Index out of range.");
-
-            if (from > to) throw new ArgumentException("\"from\" can't be bigger than \"to\".");
-
-            ICurveEvent MergedEvent = new EasingCurveEvent(Events[from].TimeStart, Events[from].ValueStart, Events[to].ValueEnd, TransfromType.Linear, EaseType.In);
-
-            Events.RemoveRange(from, to - from + 1);
-            Events.Insert(from, MergedEvent);
-        }
-
-        // 清空
-        public void Clear() => Events = new List<ICurveEvent>() { new EmptyCurveEvent(0, Events[0].ValueStart) };
-
-        // 复制
-        public CurveEventCollection Copy() => new CurveEventCollection()
-        {
-            Events = new List<ICurveEvent>(Events)
-        };
-    }
-
-    // 速度事件集合
-    public class SpeedEventCollection : IEventCollection
-    {
-        private const int LINEAR_SEARCH_THRESHOLD = 5;
-        private List<ISpeedEvent> Events { get; set; }
-        private List<double> DisplacementCache { get; set; }
-
-        public SpeedEventCollection(double initValue)
-        {
-            Events = new List<ISpeedEvent>() { new EmptySpeedEvent(0, initValue) };
-            DisplacementCache = new List<double>() { 0 };
-        }
-
-        private SpeedEventCollection() { }
-
-        // 索引器
-        public ISpeedEvent this[int index]
-        {
-            get
-            {
-                if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-                return Events[index];
-            }
-        }
-
-        // 迭代器
-        public IEnumerator GetEnumerator() => Events.GetEnumerator();
-
-        // Gets
-        public double GetValueStart(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            return Events[index].ValueStart;
-        }
-
-        public double GetValueEnd(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            return Events[index].ValueEnd;
-        }
-
-        public double GetTimeStart(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            return Events[index].TimeStart;
-        }
-
-        public double GetTimeEnd(int index)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-
-            if (index == Events.Count - 1) return double.PositiveInfinity;
-            else return Events[index + 1].TimeStart;
-        }
-
-        // Sets
-        public void SetTimeStart(int index, double time)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            if (index == 0) throw new ArgumentException("The start time at the first event can't be set.");
-
-            Merge(index - 1, index);
-            Divide(time);
-
-            UpdateDisplacementsCache(index);
-        }
-
-        public void SetTimeEnd(int index, double time)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-            if (index == Events.Count - 1) throw new ArgumentException("The start time at the end event can't be set.");
-
-            Merge(index, index + 1);
-            Divide(time);
-
-            UpdateDisplacementsCache(index + 1);
-        }
-
-        public void SetValueStart(int index, double value)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-
-            Events[index].ValueStart = value;
-            UpdateDisplacementsCache(index + 1);
-        }
-
-        public void SetValueEnd(int index, double value)
-        {
-            if (index < 0 && index >= Events.Count) throw new ArgumentException("Index out of range.");
-
-            Events[index].ValueEnd = value;
-            UpdateDisplacementsCache(index + 1);
-        }
-
-        // 查找
-        public int FindIndex(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            if (Events.Count == 1) return 0;
-
-            if (Events.Count <= LINEAR_SEARCH_THRESHOLD)
-            {
-                for (int i = 0; i < Events.Count; i++)
-                    if (Events[i].TimeStart <= time && GetTimeEnd(i) > time)
-                        return i;
-                return default;
-            }
-
-            int j = 0;
-            int k = Events.Count - 1;
-
-            while (j <= k)
-            {
-                int m = j + (k - j) / 2;
-
-                if (Events[m].TimeStart > time) k = m - 1;
-                else if (GetTimeEnd(m) < time) j = m + 1;
-                else return m;
-            }
-
-            return default;
-        }
-
-        // 取值
-        public double GetValue(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            int i = FindIndex(time);
-            return Events[i].GetValue(time, GetTimeEnd(i));
-        }
-
-        // 获取位移
-        public double GetDisplacement(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            int i = FindIndex(time);
-            double displacement = 0;
-
-            displacement += DisplacementCache[i] + Events[i].GetDisplacement(time, GetTimeEnd(i));
-
-            return displacement;
-        }
-
-        // 切分
-        public void Divide(double time)
-        {
-            if (time < 0) throw new ArgumentException("\"time\" can't be a negative.");
-
-            int i = FindIndex(time);
-            ISpeedEvent[] dividedParts = Events[i].Divide(time, GetTimeEnd(i));
-
-            Events.RemoveAt(i);
-            Events.InsertRange(i, dividedParts);
-
-            DisplacementCache.Add(0);
-            UpdateDisplacementsCache(i + 1);
-        }
-
-        // 合并
-        public void Merge(int from, int to)
-        {
-            if (from < 0 && from >= Events.Count || to < 0 && to >= Events.Count)
-                throw new ArgumentException("Index out of range.");
-
-            if (from > to) throw new ArgumentException("\"from\" can't be bigger than \"to\".");
-
-            ISpeedEvent MergedEvent = new LinearSpeedEvent(Events[from].TimeStart, Events[from].ValueStart, Events[to].ValueEnd);
-
-            Events.RemoveRange(from, to - from + 1);
-            Events.Insert(from, MergedEvent);
-
-            DisplacementCache.RemoveRange(from + 1, to - from);
-            UpdateDisplacementsCache(from + 1);
-        }
-
-        // 清空
-        public void Clear()
-        {
-            Events = new List<ISpeedEvent>() { new EmptySpeedEvent(0, Events[0].ValueStart) };
-            DisplacementCache = new List<double>() { 0 };
-        }
-
-        // 复制
-        public SpeedEventCollection Copy() => new SpeedEventCollection()
-        {
-            Events = new List<ISpeedEvent>(Events),
-            DisplacementCache = new List<double>(DisplacementCache)
-        };
-
-        // 更新位移缓存
-        public void UpdateDisplacementsCache(int from)
-        {
-            if (from < 0 && from >= Events.Count) throw new ArgumentException("Index out of range.");
-
-            if (from == 0) DisplacementCache[from++] = 0;
-            for (int i = from; i < DisplacementCache.Count; i++)
-                DisplacementCache[i] = DisplacementCache[i - 1] + Events[i - 1].GetDisplacement(GetTimeEnd(i - 1));
         }
     }
 }

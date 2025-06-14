@@ -1,13 +1,16 @@
 ﻿using System;
 
-// IndexZero 2025/5/30
-// 数学计算
-
 namespace EilansPlugins
 {
-    public enum EaseType { In, Out, InOut }
+    /// <summary>
+    /// The type of easing.
+    /// </summary>
+    public enum EasingType { In, Out, InOut }
 
-    public enum TransfromType
+    /// <summary>
+    /// The type of transform.
+    /// </summary>
+    public enum TransformType
     {
         None, Linear, Sine,
         Quad, Cubic, Quart, 
@@ -15,6 +18,9 @@ namespace EilansPlugins
         Back, Elastic, Bounce
     }
 
+    /// <summary>
+    /// Calculation of easing functions.
+    /// </summary>
     public static class Ease
     {
         private const double C1 = 1.70158;
@@ -25,101 +31,101 @@ namespace EilansPlugins
         private const double N1 = 7.5625;
         private const double D1 = 2.75;
 
-        public static double GetEase(TransfromType transfromType, EaseType easeType, double x)
+        public static double GetEase(TransformType transfromType, EasingType easeType, double x)
         {
             switch (transfromType)
             {
-                case TransfromType.None: return 0;
-                case TransfromType.Linear: return x;
+                case TransformType.None: return 0;
+                case TransformType.Linear: return x;
 
-                case TransfromType.Sine:
+                case TransformType.Sine:
                     switch (easeType)
                     {
-                        case EaseType.In: return InSine(x);
-                        case EaseType.Out: return OutSine(x);
-                        case EaseType.InOut: return InOutSine(x);
+                        case EasingType.In: return InSine(x);
+                        case EasingType.Out: return OutSine(x);
+                        case EasingType.InOut: return InOutSine(x);
                         default: return x;
                     }
 
-                case TransfromType.Quad:
+                case TransformType.Quad:
                     switch (easeType)
                     {
-                        case EaseType.In: return InQuad(x);
-                        case EaseType.Out: return OutQuad(x);
-                        case EaseType.InOut: return InOutQuad(x);
+                        case EasingType.In: return InQuad(x);
+                        case EasingType.Out: return OutQuad(x);
+                        case EasingType.InOut: return InOutQuad(x);
                         default: return x;
                     }
 
-                case TransfromType.Cubic:
+                case TransformType.Cubic:
                     switch (easeType)
                     {
-                        case EaseType.In: return InCubic(x);
-                        case EaseType.Out: return OutCubic(x);
-                        case EaseType.InOut: return InOutCubic(x);
+                        case EasingType.In: return InCubic(x);
+                        case EasingType.Out: return OutCubic(x);
+                        case EasingType.InOut: return InOutCubic(x);
                         default: return x;
                     }
 
-                case TransfromType.Quart:
+                case TransformType.Quart:
                     switch (easeType)
                     {
-                        case EaseType.In: return InQuart(x);
-                        case EaseType.Out: return OutQuart(x);
-                        case EaseType.InOut: return InOutQuart(x);
+                        case EasingType.In: return InQuart(x);
+                        case EasingType.Out: return OutQuart(x);
+                        case EasingType.InOut: return InOutQuart(x);
                         default: return x;
                     }
 
-                case TransfromType.Quint:
+                case TransformType.Quint:
                     switch (easeType)
                     {
-                        case EaseType.In: return InQuint(x);
-                        case EaseType.Out: return OutQuint(x);
-                        case EaseType.InOut: return InOutQuint(x);
+                        case EasingType.In: return InQuint(x);
+                        case EasingType.Out: return OutQuint(x);
+                        case EasingType.InOut: return InOutQuint(x);
                         default: return x;
                     }
 
-                case TransfromType.Expo:
+                case TransformType.Expo:
                     switch (easeType)
                     {
-                        case EaseType.In: return InExpo(x);
-                        case EaseType.Out: return OutExpo(x);
-                        case EaseType.InOut: return InOutExpo(x);
+                        case EasingType.In: return InExpo(x);
+                        case EasingType.Out: return OutExpo(x);
+                        case EasingType.InOut: return InOutExpo(x);
                         default: return x;
                     }
 
 
-                case TransfromType.Circ:
+                case TransformType.Circ:
                     switch (easeType)
                     {
-                        case EaseType.In: return InCirc(x);
-                        case EaseType.Out: return OutCirc(x);
-                        case EaseType.InOut: return InOutCirc(x);
+                        case EasingType.In: return InCirc(x);
+                        case EasingType.Out: return OutCirc(x);
+                        case EasingType.InOut: return InOutCirc(x);
                         default: return x;
                     }
 
-                case TransfromType.Back:
+                case TransformType.Back:
                     switch (easeType)
                     {
-                        case EaseType.In: return InBack(x);
-                        case EaseType.Out: return OutBack(x);
-                        case EaseType.InOut: return InOutBack(x);
+                        case EasingType.In: return InBack(x);
+                        case EasingType.Out: return OutBack(x);
+                        case EasingType.InOut: return InOutBack(x);
                         default: return x;
                     }
 
-                case TransfromType.Elastic:
+                case TransformType.Elastic:
                     switch (easeType)
                     {
-                        case EaseType.In: return InElastic(x);
-                        case EaseType.Out: return OutElastic(x);
-                        case EaseType.InOut: return InOutElastic(x);
+                        case EasingType.In: return InElastic(x);
+                        case EasingType.Out: return OutElastic(x);
+                        case EasingType.InOut: return InOutElastic(x);
                         default: return x;
                     }
 
-                case TransfromType.Bounce:
+                case TransformType.Bounce:
                     switch (easeType)
                     {
-                        case EaseType.In: return InBounce(x);
-                        case EaseType.Out: return OutBounce(x);
-                        case EaseType.InOut: return InOutBounce(x);
+                        case EasingType.In: return InBounce(x);
+                        case EasingType.Out: return OutBounce(x);
+                        case EasingType.InOut: return InOutBounce(x);
                         default: return x;
                     }
 
